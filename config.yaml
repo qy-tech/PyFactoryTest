@@ -1,0 +1,83 @@
+testcase:
+  - {
+      id: 0,
+      name: WLAN0,
+      command: ifconfig eth0,
+      type: automatic,
+      result: &ipregex '\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b',
+    }
+  - {
+      id: 1,
+      name: WLAN1,
+      command: ifconfig eth1,
+      type: automatic,
+      result: *ipregex,
+    }
+  - {
+      id: 2,
+      name: WIFI,
+      command: "/tmp/FactoryTest_WIFI.sh QYTECH qytech1688",
+      type: automatic,
+      result: 'WIFITest=\[OK\]',
+    }
+  - {
+      id: 3,
+      name: BT,
+      command: hcitool dev,
+      type: automatic,
+      result: 'hci\d+.*(?:\S{2}:){5}\S{2}',
+    }
+  - {
+      id: 4,
+      name: USB,
+      command: "/tmp/FactoryTest_Storage.sh usb",
+      type: automatic,
+      result: 'USBTest=\[Ok\]',
+    }
+  - {
+      id: 5,
+      name: 4G,
+      command: "/tmp/FactoryTest_4G.sh",
+      type: automatic,
+      result: '4GTest=\[OK\]',
+    }
+  - {
+      id: 6,
+      name: SD,
+      command: "/tmp/FactoryTest_Storage.sh sdcard",
+      type: automatic,
+      result: 'SdcardTest=\[Ok\]',
+    }
+  - {
+      id: 7,
+      name: Microphone,
+      command: "arecord -Dhw:1,0 -d 5 -f cd -r 44100 -c 2 -t wav /tmp/test.wav; aplay -D plughw:1,0 /tmp/test.wav",
+      type: manual,
+      result: "",
+    }
+  - {
+      id: 8,
+      name: Speaker,
+      command: "aplay -D plughw:1,0 /tmp/factory_test.wav",
+      type: manual,
+      result: "",
+    }
+  - {
+      id: 9,
+      name: RTC,
+      command: "/tmp/FactoryTest_Rtc.sh",
+      type: automatic,
+      result: 'RTCTest=\[OK\]',
+    }
+
+selected:
+  - WLAN0
+  - WLAN1
+  - WIFI
+  - BT
+  - USB
+  - 4G
+  - SD
+  - Microphone
+  - Speaker
+  - RTC
