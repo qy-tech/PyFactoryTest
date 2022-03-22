@@ -1,21 +1,25 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argparse
 import logging
 import os
 import re
 import shutil
 import sys
+import threading
+import time
 import tkinter as tk
+from tkinter import *
 from tkinter import messagebox as msg
 from tkinter import ttk
-
+import time
 import yaml
 
 from utils import Utils
 
 # set chardet log only show error
 logging.getLogger('chardet').setLevel(logging.ERROR)
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)  # , filename="/tmp/FactoryTest.log")
 
 
 class FactoryTest(tk.Tk):
@@ -40,6 +44,7 @@ class FactoryTest(tk.Tk):
         self.task_views = []
 
         self.all_testcases = []
+        self.agingtest = []
         self.selected_testcases = []
         self.test_result = True
         self.result_dicts = {}
@@ -54,7 +59,6 @@ class FactoryTest(tk.Tk):
         self.init_run_script()
 
         self.title('FactoryTest')
-        self.geometry('480x640')
 
         self.init_menu()
         self.init_listview()
@@ -62,6 +66,8 @@ class FactoryTest(tk.Tk):
 
         for testcase in self.selected_testcases:
             self.add_testcase(testcase)
+
+        Utils.resize_window(self, 480, 640)
 
     def load_config(self):
         """
@@ -74,8 +80,9 @@ class FactoryTest(tk.Tk):
             config_file = os.path.join(self.real_path, 'config.yaml')
         with open(config_file, 'rb') as f:
             config = yaml.load(f.read(), Loader=yaml.SafeLoader)
-        self.all_testcases = config['testcase']
-        self.selected_testcases = config['selected']
+        self.all_testcases = config['factorytest']['testcase']
+        self.selected_testcases = config['factorytest']['selected']
+        self.agingtest = config['agingtest']
         # logging.debug(f'config: {config}')
 
     def init_menu(self):
@@ -86,6 +93,7 @@ class FactoryTest(tk.Tk):
         self.menu = tk.Menu(self, bg='lightgrey', fg='black')
         self.menu.add_command(label='AutoTest', command=self.start_auto_test)
         self.menu.add_command(label='Reset', command=self.reset_test_status)
+        self.menu.add_command(label='AgingTest', command=self.run_aging_test)
         self.config(menu=self.menu)
 
     def init_listview(self):
@@ -111,16 +119,18 @@ class FactoryTest(tk.Tk):
         self.tasks_canvas.bind("<Configure>", self.task_width)
 
     def init_run_script(self):
+        if sys.platform.startswith("win"):
+            return
         script_dir = os.path.join(self.real_path, 'bin')
         data_dir = os.path.join(self.real_path, 'data')
-        if os.path.isdir(script_dir):
+        if os.path.exists(script_dir) and os.path.isdir(script_dir):
             for script in os.listdir(script_dir):
                 src = os.path.join(script_dir, script)
                 dist = os.path.join('/tmp/', script)
                 shutil.copyfile(src, dist)
                 os.system(f'chmod 777 {dist}')
 
-        if os.path.isdir(data_dir):
+        if os.path.exists(data_dir) and os.path.isdir(data_dir):
             for data in os.listdir(data_dir):
                 src = os.path.join(data_dir, data)
                 dist = os.path.join('/tmp/', data)
@@ -229,9 +239,145 @@ class FactoryTest(tk.Tk):
 
             self.tasks_canvas.yview_scroll(move, "units")
 
+    def run_aging_test(self):
+        AgingTestWindow(self, self.agingtest)
+
+
+class AgingTestWindow(tk.Toplevel):
+    """
+    CPU老化                   cpu 温度 cpu频率 CPU型号 CPU核心数 CPU使用率
+    GPU老化                   播放GPU动画
+    VPU老化                   播放视频
+    memory老化                压力测试
+    """
+
+    def __init__(self, master, agingtest):
+        super().__init__(master)
+        self.title("AgingTest")
+        self.testcase = agingtest['testcase']
+        self.time = agingtest['time']
+        if not self.time:
+            self.time = 4
+        self.grids = {}
+        self.test_methods = {
+            "cpu": self.cpu_test,
+            "gpu": self.gpu_test,
+            "vpu": self.vpu_test,
+            "memory": self.memory_test,
+        }
+        self.threads = []
+
+        self.add_testcases()
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        Utils.resize_window(self)
+        # 老化4个小时后自动结束
+        self.after(self.time*60*60*1000, self.on_closing)
+
+    def add_testcases(self):
+        try:
+            for index, testcase in enumerate(self.testcase):
+                if testcase['enable']:
+                    text = Text(self, width=44, height=14, background="#CCC")
+                    text.grid(row=index // 2, column=index % 2, padx=2, pady=2)
+                    self.grids[testcase['id']] = text
+
+                    self.update_test_info(
+                        testcase['id'], f'{testcase["name"]}\n')
+
+                    self.test_methods[testcase['name']](testcase)
+        except Exception as e:
+            logging.error(f'error run case {e}')
+
+        for i in range(len(self.testcase)//2):
+            self.grid_rowconfigure(i, weight=1)
+            self.grid_columnconfigure(i, weight=1)
+
+    def on_closing(self):
+        for thread in self.threads:
+            thread.force_quit = True
+            thread.join()
+
+        self.after(10, self.destroy)
+
+    def start_test_thread(self, testcase):
+        if not testcase['command']:
+            return
+        thread = AgingTestThread(self, testcase)
+        self.threads.append(thread)
+        thread.start()
+
+    def cpu_test(self, testcase):
+        logging.debug(f'cpu test {testcase}')
+        self.start_test_thread(testcase)
+
+    def memory_test(self, testcase):
+        logging.debug(f'memory test {testcase}')
+        self.start_test_thread(testcase)
+
+    def vpu_test(self, testcase):
+        logging.debug(f'vpu test {testcase}')
+        self.start_test_thread(testcase)
+
+    def gpu_test(self, testcase):
+        logging.debug(f'gpu test {testcase}')
+        self.start_test_thread(testcase)
+
+    def update_test_info(self, id, text):
+        self.grids[id].insert(tk.END, text)
+        self.grids[id].see(tk.END)
+
+
+class AgingTestThread(threading.Thread):
+    def __init__(self, master, testcase):
+        super().__init__()
+        self.force_quit = False
+        self.master = master
+        self.testcase = testcase
+        self.last_time = time.time()
+
+    def run(self):
+        while True:
+            if self.force_quit:
+                return
+            self.main_loop()
+
+    def format_output(self, message):
+        try:
+            if self.testcase['name'] == 'cpu':
+                temp = message.split(' ')
+                time_format = Utils.conv_time(int(time.time() - self.last_time))
+                if len(temp) > 1:
+                    message = f'{time_format} CPU temp: {int(temp[0])//1000}℃, CPU freq {int(temp[1])//1000}M\n'
+        except Exception as e:
+            logging.error(e)
+        return message
+
+    def callback(self, message):
+        self.master.update_test_info(
+            self.testcase['id'],
+            self.format_output(message)
+        )
+
+    def main_loop(self):
+        if self.testcase['command'] and not self.force_quit:
+            cmd = self.testcase['command']
+            Utils.run_shell_with_callback(cmd, self.callback)
+        time.sleep(3)
+
 
 def main():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-a', '--agingtest',
+                        action='store_true', help="run aging test")
+    args = parser.parse_args()
+
     factory_test = FactoryTest()
+
+    if args.agingtest:
+        factory_test.run_aging_test()
+
     factory_test.mainloop()
 
 
