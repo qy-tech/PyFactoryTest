@@ -19,7 +19,7 @@ from utils import Utils
 
 # set chardet log only show error
 logging.getLogger('chardet').setLevel(logging.ERROR)
-logging.basicConfig(level=logging.DEBUG)  # , filename="/tmp/FactoryTest.log")
+logging.basicConfig(level=logging.DEBUG , filename="/tmp/FactoryTest.log")
 
 
 class FactoryTest(tk.Tk):
@@ -59,6 +59,7 @@ class FactoryTest(tk.Tk):
         self.init_run_script()
 
         self.title('FactoryTest')
+        self.geometry("480x640")
 
         self.init_menu()
         self.init_listview()
@@ -67,7 +68,7 @@ class FactoryTest(tk.Tk):
         for testcase in self.selected_testcases:
             self.add_testcase(testcase)
 
-        Utils.resize_window(self, 480, 640)
+        # Utils.resize_window(self, 480, 640)
 
     def load_config(self):
         """
@@ -199,7 +200,10 @@ class FactoryTest(tk.Tk):
         result = Utils.run_shell_command(testcase['command'])
         logging.debug(f'test {task_name} result {result}')
         # 判断是否测试成功，部分需要手动判断测试结果
-        if 'manual' == testcase['type']:
+        if 'display' == testcase['type']:
+            logging.debug('please checkout this item display')
+            success = msg.askyesno(f'TestCase success?', f'{result}')
+        elif 'manual' == testcase['type']:
             logging.debug('please checkout this item manual')
             success = msg.askyesno('TestCase success?', f'Is {task_name} OK？')
         else:
@@ -269,7 +273,7 @@ class AgingTestWindow(tk.Toplevel):
 
         self.add_testcases()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
-        Utils.resize_window(self)
+        # Utils.resize_window(self)
         # 老化4个小时后自动结束
         self.after(self.time*60*60*1000, self.on_closing)
 
@@ -345,7 +349,8 @@ class AgingTestThread(threading.Thread):
         try:
             if self.testcase['name'] == 'cpu':
                 temp = message.split(' ')
-                time_format = Utils.conv_time(int(time.time() - self.last_time))
+                time_format = Utils.conv_time(
+                    int(time.time() - self.last_time))
                 if len(temp) > 1:
                     message = f'{time_format} CPU temp: {int(temp[0])//1000}℃, CPU freq {int(temp[1])//1000}M\n'
         except Exception as e:

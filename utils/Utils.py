@@ -56,7 +56,7 @@ def conv_time(time):
     minute = time // 60 % 60
     hour = time // 3600
     if time // 3600:
-        return f'{hour}h {minute} m{second}s'
+        return f'{hour}h {minute}m {second}s'
     elif time // 60:
         return f'{minute}m {second}s'
     else:
