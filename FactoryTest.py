@@ -19,7 +19,7 @@ from utils import Utils
 
 # set chardet log only show error
 logging.getLogger('chardet').setLevel(logging.ERROR)
-logging.basicConfig(level=logging.DEBUG , filename="/tmp/FactoryTest.log")
+logging.basicConfig(level=logging.DEBUG, filename="/tmp/FactoryTest.log")
 
 
 class FactoryTest(tk.Tk):
@@ -59,7 +59,7 @@ class FactoryTest(tk.Tk):
         self.init_run_script()
 
         self.title('FactoryTest')
-        self.geometry("480x640")
+        self.geometry("600x800")
 
         self.init_menu()
         self.init_listview()
@@ -160,7 +160,9 @@ class FactoryTest(tk.Tk):
         self.result_dicts.clear()
 
         for task in self.task_views:
-            task.config(self.colour_schemes['default'])
+            name = task.cget('text').split(' ')[0]
+            task.config(self.colour_schemes['default'],
+                        text=name)
         self.test_status_view.config(self.colour_schemes['default'])
         self.test_status_view.config(text='All Test Result')
 
@@ -193,6 +195,7 @@ class FactoryTest(tk.Tk):
 
     def run_testcase_command(self, task):
         task_name = task.cget('text')
+
         # testcase = list(filter(lambda item: item['name'] == task_name, self.config['testcase']))
         testcase = next(
             (item for item in self.all_testcases if item["name"] == task_name), None)
@@ -212,17 +215,25 @@ class FactoryTest(tk.Tk):
             find_result = re.findall(pattern, result)
             logging.debug(f'test result {find_result}')
             success = len(find_result) > 0
+        display = ' '.join(re.findall(
+            r'Display=\[(.*?)\]', result, re.S)).strip()
         self.result_dicts[task_name] = success
         self.test_result = all(self.result_dicts.values())
         logging.debug(
             f'{testcase["command"]} result is {result} success {success} all test success {self.test_result}')
+        if display:
+            message = display
+        elif success:
+            message = 'Pass'
+        else:
+            message = 'Fail'
+        style = self.colour_schemes['success'] if success else self.colour_schemes['error']
+        task.config(style, text=f'{task_name} {message}')
 
-        task.config(self.colour_schemes['success']
-                    if success else self.colour_schemes['error'])
         self.test_status_view.config(
             self.colour_schemes['success'] if self.test_result else self.colour_schemes['error'])
         self.test_status_view.config(
-            text='Success' if self.test_result else 'Error')
+            text='Pass' if self.test_result else 'Fail')
 
     def on_frame_configure(self, event=None):
         self.tasks_canvas.configure(scrollregion=self.tasks_canvas.bbox("all"))

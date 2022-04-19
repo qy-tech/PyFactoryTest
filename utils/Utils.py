@@ -1,10 +1,12 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from pathlib import Path
 import logging
 import re
 import subprocess
-
+import os
 import chardet
+import yaml
 
 
 def run_shell_command(command):
@@ -61,3 +63,26 @@ def conv_time(time):
         return f'{minute}m {second}s'
     else:
         return f'{second}s'
+
+
+def realpath():
+    # When your program is not bundled,
+    # the Python variable __file__ refers to the current path of the module it is contained in.
+    # When importing a module from a bundled script,
+    # the PyInstaller bootloader will set the module’s __file__ attribute to the correct path relative to the bundle folder.
+    return Path(__file__).parents[1].resolve()
+
+
+def load_config():
+    name = 'config.yaml'
+    if os.path.exists(f'/tmp/{name}'):
+        print('load from tmp')
+        path = f'/tmp/{name}'
+    else:
+        print('load from local')
+        path = f'{realpath()}/{name}'
+    print(f'config path is {path}')
+    if not os.path.exists(path):
+        return None
+    with open(path, mode='rb') as f:
+        return yaml.load(f.read(), Loader=yaml.SafeLoader)

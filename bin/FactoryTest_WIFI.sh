@@ -31,9 +31,15 @@ else
 	echo "ssid $1 password $2"
 fi
 
+function getSignalLevel() {
+	signalLevel=$(iwconfig wlan0 | grep -oP "(Signal level=*.?\d+\sdBm)")
+	echo "Display=[$signalLevel]"
+}
+
 # IP=$(ifconfig wlan0 | grep "inet addr" | awk '{print $2}' | awk -F: '{print $2}')
 IP=$(busybox ifconfig wlan0 | grep "inet addr" | awk '{print $2}' | awk -F: '{print $2}')
 if [ -n "$IP" ]; then
+	getSignalLevel
 	echo "WIFITest=[OK]"
 	exit 0
 fi
@@ -59,6 +65,7 @@ if [ -n "$psk_wifi" ]; then
 	sleep 1
 	checkip
 	if [ $ret -eq 1 ]; then
+		getSignalLevel
 		echo "WIFITest=[OK]"
 	else
 		echo "WIFITest=[NG]"

@@ -38,7 +38,7 @@ factorytest:
     - {
         id: 5,
         name: 4G,
-        command: "/tmp/FactoryTest_4G.sh",
+        command: "/tmp/FactoryTest_Serial 4G",
         type: automatic,
         result: '4GTest=\[OK\]',
       }
@@ -73,7 +73,7 @@ factorytest:
     - {
         id: 10,
         name: GPS,
-        command: "/tmp/FactoryTest_GPS",
+        command: "/tmp/FactoryTest_Serial GPS",
         type: automatic,
         result: 'GPSTest=\[OK\]',
       }
